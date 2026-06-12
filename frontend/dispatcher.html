@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FleetPulse Dispatcher Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+--bg:#0D1117;
+--card:#161B22;
+--card-hover:#1F2630;
+--accent:#FF6B35;
+--text:#F8FAFC;
+--muted:#94A3B8;
+--border:#26303C;
+}
+*{ margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; }
+body{ background:var(--bg); color:var(--text); }
+
+.navbar{
+  height:75px; display:flex; justify-content:space-between; align-items:center;
+  padding:0 50px; border-bottom:1px solid var(--border);
+  position:sticky; top:0; background:#0D1117; z-index:100;
+}
+.logo{ font-size:30px; font-weight:800; }
+.logo span{ color:var(--accent); }
+.nav-links{ display:flex; gap:30px; }
+.nav-links a{ text-decoration:none; color:var(--muted); transition:.3s; }
+.nav-links a:hover{ color:white; }
+.nav-right a{
+  text-decoration:none; color:var(--muted); font-size:13px; font-weight:500;
+  padding:7px 16px; border:1px solid var(--border); border-radius:8px; transition:.3s;
+}
+.nav-right a:hover{ color:white; border-color:var(--accent); }
+
+.container{ padding:40px; }
+
+.hero{
+  position:relative; overflow:hidden;
+  background:linear-gradient(135deg,#161B22,#1B2430);
+  padding:40px; border-radius:24px; margin-bottom:30px;
+  border:1px solid var(--border);
+}
+.hero::before{
+  content:""; position:absolute; width:350px; height:350px;
+  background:rgba(255,107,53,.18); filter:blur(120px);
+  top:-120px; right:-80px; pointer-events:none;
+}
+.hero h1{ position:relative; z-index:2; font-size:42px; margin-bottom:10px; }
+.hero p{ position:relative; z-index:2; color:var(--muted); max-width:700px; line-height:1.7; }
+.hero button{
+  position:relative; z-index:2; margin-top:25px; padding:15px 25px;
+  border:none; border-radius:12px; cursor:pointer; font-weight:700; font-size:15px;
+  background:linear-gradient(135deg,#FF6B35,#FF8C42); color:white; transition:.3s;
+}
+.hero button:hover{ transform:translateY(-3px); box-shadow:0 0 25px rgba(255,107,53,.45); }
+
+.stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px; margin-bottom:30px; }
+.card{
+  background:var(--card); padding:25px; border-radius:20px;
+  border:1px solid var(--border); transition:.3s;
+}
+.card:hover{ transform:translateY(-5px); background:var(--card-hover); box-shadow:0 0 25px rgba(255,107,53,.18); border-color:rgba(255,107,53,.35); }
+.card-icon{ font-size:28px; margin-bottom:10px; }
+.card-title{ color:var(--muted); }
+.card-value{ font-size:34px; font-weight:700; margin-top:10px; }
+
+.grid{ display:grid; grid-template-columns:2fr 1fr; gap:25px; }
+
+.queue-card{
+  background:var(--card); padding:30px; border-radius:20px;
+  border:1px solid var(--border);
+}
+.queue-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.queue-card h2{ margin:0; }
+.refresh-btn{ font-size:12px; color:var(--muted); background:none; border:none; cursor:pointer; font-family:'Inter',sans-serif; transition:color .2s; }
+.refresh-btn:hover{ color:white; }
+
+.order{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:16px; margin-top:12px; background:#1B2430; border-radius:14px;
+  border-left:3px solid transparent; transition:.2s;
+}
+.order.pending   { border-left-color:#D29922; }
+.order.assigned  { border-left-color:#58A6FF; }
+.order.in_transit{ border-left-color:#FF6B35; }
+.order.delivered { border-left-color:#3FB950; }
+
+.order-info{ display:flex; flex-direction:column; gap:4px; }
+.order-id{ font-size:11px; font-family:monospace; color:var(--muted); }
+.order-route{ font-size:13px; font-weight:500; }
+.order-meta{ font-size:12px; color:var(--muted); }
+.order-rider{ font-size:12px; color:#58A6FF; }
+
+.order-actions{ display:flex; align-items:center; gap:8px; }
+.payout{ font-size:12px; font-family:monospace; color:#3FB950; font-weight:600; }
+
+.assign-btn{
+  padding:8px 16px; border:none; border-radius:10px; cursor:pointer;
+  font-weight:600; font-size:13px;
+  background:linear-gradient(135deg,#FF6B35,#FF8C42);
+  color:white; transition:.3s; font-family:'Inter',sans-serif;
+}
+.assign-btn:hover{ transform:translateY(-2px); box-shadow:0 0 20px rgba(255,107,53,.4); }
+.assign-btn:disabled{ background:#2A3142; color:#4A5568; cursor:not-allowed; transform:none; box-shadow:none; }
+
+.status-btn{
+  padding:8px 14px; border:1px solid var(--border); border-radius:10px;
+  cursor:pointer; font-weight:500; font-size:12px;
+  background:#1B2430; color:var(--muted);
+  transition:.2s; font-family:'Inter',sans-serif;
+}
+.status-btn:hover{ color:white; border-color:var(--muted); }
+
+.badge{ padding:5px 12px; border-radius:20px; font-size:11px; font-weight:700; }
+.badge-pending   { background:rgba(210,153,34,.15); color:#D29922; }
+.badge-assigned  { background:rgba(88,166,255,.12); color:#58A6FF; }
+.badge-in_transit{ background:rgba(255,107,53,.15); color:#FF6B35; }
+.badge-delivered { background:rgba(63,185,80,.12);  color:#3FB950; }
+.badge-cancelled { background:rgba(248,81,73,.12);  color:#F85149; }
+
+.sidebar-card{
+  background:var(--card); padding:30px; border-radius:20px;
+  border:1px solid var(--border); margin-bottom:20px;
+}
+.sidebar-card h2{ margin-bottom:20px; }
+
+.activity{ padding:12px 0; border-bottom:1px solid var(--border); font-size:13px; color:var(--muted); }
+.activity:last-child{ border:none; }
+.activity span{ color:var(--text); font-weight:500; }
+
+.rider-status{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 14px; background:#1B2430; border-radius:10px; margin-bottom:8px;
+  font-size:13px;
+}
+.rider-name{ font-weight:500; }
+.dot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+.dot.available{ background:#3FB950; }
+.dot.busy{ background:#D29922; }
+.dot.offline{ background:#4A5568; }
+.status-label.available{ color:#3FB950; }
+.status-label.busy{ color:#D29922; }
+.status-label.offline{ color:#94A3B8; }
+
+/* ADD RIDER FORM */
+.add-form{ margin-top:16px; }
+.add-form input{
+  width:100%; padding:10px 14px; margin-bottom:8px;
+  border:1px solid var(--border); border-radius:10px;
+  background:#1B2430; color:white; font-family:'Inter',sans-serif;
+  font-size:13px; outline:none; transition:border-color .2s;
+}
+.add-form input:focus{ border-color:var(--accent); }
+.add-form input::placeholder{ color:#4A5568; }
+.add-form button{
+  width:100%; padding:10px; border:none; border-radius:10px;
+  background:linear-gradient(135deg,#FF6B35,#FF8C42); color:white;
+  font-weight:700; font-size:13px; cursor:pointer; font-family:'Inter',sans-serif; transition:.3s;
+}
+.add-form button:hover{ transform:translateY(-2px); box-shadow:0 0 20px rgba(255,107,53,.4); }
+
+/* MODAL */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(0,0,0,.7);
+  backdrop-filter:blur(4px); z-index:200;
+  display:none; align-items:center; justify-content:center;
+}
+.modal-overlay.open{ display:flex; }
+.modal{
+  background:#161B22; border:1px solid var(--border);
+  border-radius:20px; padding:28px; width:400px;
+}
+.modal h3{ margin-bottom:16px; font-size:18px; }
+.rider-option{
+  display:flex; align-items:center; gap:12px;
+  padding:12px 14px; border-radius:12px; cursor:pointer;
+  border:1px solid var(--border); margin-bottom:8px; transition:.2s;
+}
+.rider-option:hover{ border-color:var(--accent); background:rgba(255,107,53,.05); }
+.rider-option.selected{ border-color:var(--accent); background:rgba(255,107,53,.1); }
+.rider-avatar{
+  width:36px; height:36px; border-radius:50%;
+  background:rgba(255,107,53,.15); color:var(--accent);
+  font-weight:700; display:flex; align-items:center; justify-content:center;
+}
+.modal-footer{ display:flex; gap:8px; margin-top:16px; }
+.modal-confirm{
+  flex:1; padding:11px; border:none; border-radius:10px;
+  background:linear-gradient(135deg,#FF6B35,#FF8C42); color:white;
+  font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; transition:.3s;
+}
+.modal-confirm:hover{ box-shadow:0 0 20px rgba(255,107,53,.4); }
+.modal-cancel{
+  padding:11px 18px; border:1px solid var(--border); border-radius:10px;
+  background:none; color:var(--muted); cursor:pointer;
+  font-family:'Inter',sans-serif; transition:.2s;
+}
+.modal-cancel:hover{ color:white; }
+
+/* TOAST */
+#toast{
+  position:fixed; bottom:24px; right:24px; padding:14px 20px;
+  border-radius:12px; font-size:13px; font-weight:600;
+  transform:translateY(80px); opacity:0; transition:all .25s; z-index:999;
+}
+#toast.show{ transform:translateY(0); opacity:1; }
+#toast.success{ background:#161B22; border:1px solid #3FB950; color:#3FB950; }
+#toast.error  { background:#161B22; border:1px solid #F85149; color:#F85149; }
+
+.empty{ text-align:center; padding:30px; color:var(--muted); font-size:13px; }
+.filter-tabs{ display:flex; gap:4px; background:#1B2430; padding:3px; border-radius:8px; margin-bottom:16px; }
+.filter-tab{ padding:5px 14px; border-radius:6px; font-size:12px; font-weight:500; cursor:pointer; color:var(--muted); background:none; border:none; font-family:'Inter',sans-serif; transition:.15s; }
+.filter-tab.active{ background:var(--card); color:var(--text); }
+
+@media(max-width:900px){
+  .grid{ grid-template-columns:1fr; }
+  .hero h1{ font-size:32px; }
+  .nav-links{ display:none; }
+}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="logo">Fleet<span>Pulse</span></div>
+  <div class="nav-links">
+    <a href="#">Dashboard</a>
+    <a href="#">Riders</a>
+    <a href="#">Orders</a>
+    <a href="#">Analytics</a>
+  </div>
+  <div class="nav-right">
+    <a href="/app/merchant.html">Merchant Portal →</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <section class="hero">
+    <h1>Dispatcher Control Center 🚚</h1>
+    <p>Monitor rider activity, assign deliveries, track active orders and manage fleet operations efficiently from a single dashboard.</p>
+    <button onclick="document.querySelector('.queue-card').scrollIntoView({behavior:'smooth'})">View Dispatch Queue</button>
+  </section>
+
+  <section class="stats">
+    <div class="card">
+      <div class="card-icon">🚚</div>
+      <div class="card-title">Available Riders</div>
+      <div class="card-value" id="s-available">—</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">📦</div>
+      <div class="card-title">Pending Orders</div>
+      <div class="card-value" id="s-pending">—</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <div class="card-title">In Transit</div>
+      <div class="card-value" id="s-transit">—</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">✅</div>
+      <div class="card-title">Delivered Today</div>
+      <div class="card-value" id="s-delivered">—</div>
+    </div>
+  </section>
+
+  <section class="grid">
+
+    <div class="queue-card">
+      <div class="queue-header">
+        <h2>Dispatch Queue</h2>
+        <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
+      </div>
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="setFilter('all',this)">All</button>
+        <button class="filter-tab" onclick="setFilter('pending',this)">Pending</button>
+        <button class="filter-tab" onclick="setFilter('assigned',this)">Assigned</button>
+        <button class="filter-tab" onclick="setFilter('in_transit',this)">In Transit</button>
+        <button class="filter-tab" onclick="setFilter('delivered',this)">Delivered</button>
+      </div>
+      <div id="orders-list">
+        <div class="empty">Loading orders…</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sidebar-card">
+        <h2>Live Activity</h2>
+        <div id="activity-list">
+          <div class="activity">Loading…</div>
+        </div>
+      </div>
+
+      <div class="sidebar-card">
+        <h2>Fleet Status</h2>
+        <div id="fleet-list">
+          <div class="activity">Loading riders…</div>
+        </div>
+        <div class="add-form" style="margin-top:20px">
+          <input id="r-name" placeholder="Rider name">
+          <input id="r-phone" placeholder="Phone number">
+          <button onclick="addRider()">+ Add Rider</button>
+        </div>
+      </div>
+    </div>
+
+  </section>
+</div>
+
+<!-- Assign Modal -->
+<div class="modal-overlay" id="assign-modal">
+  <div class="modal">
+    <h3>Assign a Rider</h3>
+    <div id="modal-riders"></div>
+    <div class="modal-footer">
+      <button class="modal-confirm" onclick="confirmAssign()">Confirm Assignment</button>
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = 'http://localhost:8000';
+let allOrders = [], allRiders = [];
+let currentFilter = 'all';
+let assigningOrderId = null, selectedRiderId = null;
+
+async function loadData() {
+  try {
+    const [oRes, rRes] = await Promise.all([
+      fetch(`${API}/orders/`),
+      fetch(`${API}/riders/`)
+    ]);
+    allOrders = await oRes.json();
+    allRiders = await rRes.json();
+    renderStats();
+    renderOrders();
+    renderActivity();
+    renderFleet();
+  } catch(e) {
+    toast('Cannot reach API — is the server running?', 'error');
+  }
+}
+
+function renderStats() {
+  document.getElementById('s-available').textContent = allRiders.filter(r => r.status === 'available').length;
+  document.getElementById('s-pending').textContent   = allOrders.filter(o => o.status === 'pending').length;
+  document.getElementById('s-transit').textContent   = allOrders.filter(o => o.status === 'in_transit').length;
+  document.getElementById('s-delivered').textContent = allOrders.filter(o => o.status === 'delivered').length;
+}
+
+function renderOrders() {
+  const el = document.getElementById('orders-list');
+  const filtered = currentFilter === 'all' ? allOrders : allOrders.filter(o => o.status === currentFilter);
+
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty">No ${currentFilter === 'all' ? '' : currentFilter} orders right now</div>`;
+    return;
+  }
+
+  el.innerHTML = filtered.map(o => `
+    <div class="order ${o.status}">
+      <div class="order-info">
+        <span class="order-id">#ORD-${String(o.id).padStart(4,'0')}</span>
+        <span class="order-route">${o.pickup_address} → ${o.delivery_address}</span>
+        <span class="order-meta">Merchant: ${o.merchant_name || '—'}</span>
+        ${o.rider_name ? `<span class="order-rider">🏍 ${o.rider_name}</span>` : ''}
+      </div>
+      <div class="order-actions">
+        ${o.estimated_payout ? `<span class="payout">₹${o.estimated_payout}</span>` : ''}
+        ${o.status === 'pending'    ? `<button class="assign-btn" onclick="openAssign(${o.id})">Assign Rider</button>` : ''}
+        ${o.status === 'assigned'   ? `<button class="status-btn" onclick="updateStatus(${o.id},'in_transit')">Mark In Transit</button>` : ''}
+        ${o.status === 'in_transit' ? `<button class="status-btn" onclick="updateStatus(${o.id},'delivered')">Mark Delivered</button>` : ''}
+        <span class="badge badge-${o.status}">${o.status.replace('_',' ')}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderActivity() {
+  const el = document.getElementById('activity-list');
+  const recent = allOrders.slice(0, 6);
+  if (!recent.length) { el.innerHTML = '<div class="activity">No activity yet</div>'; return; }
+  const icons = { pending:'🟡', assigned:'🔵', in_transit:'🟠', delivered:'✅', cancelled:'❌' };
+  el.innerHTML = recent.map(o => `
+    <div class="activity">
+      ${icons[o.status] || '📦'}
+      <span>#ORD-${String(o.id).padStart(4,'0')}</span>
+      — ${o.status.replace('_',' ')} · ${o.customer_name}
+    </div>
+  `).join('');
+}
+
+function renderFleet() {
+  const el = document.getElementById('fleet-list');
+  if (!allRiders.length) { el.innerHTML = '<div class="activity">No riders yet</div>'; return; }
+  el.innerHTML = allRiders.map(r => `
+    <div class="rider-status">
+      <span class="rider-name">${r.name}</span>
+      <span>
+        <span class="dot ${r.status}"></span>
+        <span class="status-label ${r.status}">${r.status}</span>
+      </span>
+    </div>
+  `).join('');
+}
+
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderOrders();
+}
+
+function openAssign(orderId) {
+  assigningOrderId = orderId;
+  selectedRiderId = null;
+  const avail = allRiders.filter(r => r.status === 'available');
+  const el = document.getElementById('modal-riders');
+  if (!avail.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:12px 0">No available riders right now</p>';
+  } else {
+    el.innerHTML = avail.map(r => `
+      <div class="rider-option" onclick="selectRider(${r.id}, this)">
+        <div class="rider-avatar">${r.name.charAt(0).toUpperCase()}</div>
+        <div>
+          <div style="font-weight:600;font-size:14px">${r.name}</div>
+          <div style="font-size:12px;color:var(--muted)">${r.phone}</div>
+        </div>
+        <span class="dot available" style="margin-left:auto"></span>
+      </div>
+    `).join('');
+  }
+  document.getElementById('assign-modal').classList.add('open');
+}
+
+function selectRider(id, el) {
+  selectedRiderId = id;
+  document.querySelectorAll('.rider-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+async function confirmAssign() {
+  if (!selectedRiderId) { toast('Select a rider first', 'error'); return; }
+  const res = await fetch(`${API}/orders/${assigningOrderId}/assign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rider_id: selectedRiderId })
+  });
+  const data = await res.json();
+  if (res.ok) {
+    toast(`✅ Rider assigned — estimated payout ₹${data.estimated_payout}`, 'success');
+    closeModal();
+    loadData();
+  } else {
+    toast(data.detail || 'Assignment failed', 'error');
+  }
+}
+
+function closeModal() {
+  document.getElementById('assign-modal').classList.remove('open');
+  assigningOrderId = null; selectedRiderId = null;
+}
+
+async function updateStatus(orderId, status) {
+  const res = await fetch(`${API}/orders/${orderId}/status?status=${status}`, { method: 'POST' });
+  if (res.ok) {
+    toast(`Status updated to ${status.replace('_',' ')}`, 'success');
+    loadData();
+  } else {
+    toast('Update failed', 'error');
+  }
+}
+
+async function addRider() {
+  const name  = document.getElementById('r-name').value.trim();
+  const phone = document.getElementById('r-phone').value.trim();
+  if (!name || !phone) { toast('Enter name and phone', 'error'); return; }
+  const res = await fetch(`${API}/riders/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, phone })
+  });
+  if (res.ok) {
+    toast(`${name} added to fleet`, 'success');
+    document.getElementById('r-name').value = '';
+    document.getElementById('r-phone').value = '';
+    loadData();
+  } else {
+    const err = await res.json();
+    toast(err.detail || 'Failed to add rider', 'error');
+  }
+}
+
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => el.className = '', 3500);
+}
+
+loadData();
+setInterval(loadData, 8000);
+</script>
+</body>
+</html>
