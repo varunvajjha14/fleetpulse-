@@ -101,7 +101,12 @@ def update_status(order_id: int, status: str, db: Session = Depends(get_db)):
 
 def _estimate_payout(order: Order) -> float:
     if order.pickup_lat and order.delivery_lat:
-        dist = math.sqrt((order.pickup_lat - order.delivery_lat)**2 +
-                         (order.pickup_lng - order.delivery_lng)**2) * 111
-        return round(30 + dist * 8, 2)
+        from ml.predictor import predict_payout
+        return predict_payout(
+            order.pickup_lat,
+            order.pickup_lng,
+            order.delivery_lat,
+            order.delivery_lng,
+            order.created_at
+        )
     return 50.0

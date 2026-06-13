@@ -245,6 +245,18 @@ input::placeholder{ color:#4A5568; }
       <label class="field-label">Delivery address</label>
       <input id="f-delivery" placeholder="e.g. Bandra East, Mumbai">
 
+      <label class="field-label">Pickup coordinates</label>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+  <input id="f-plat" placeholder="Lat e.g. 19.0596" type="number" step="0.0001">
+  <input id="f-plng" placeholder="Lng e.g. 72.8295" type="number" step="0.0001">
+</div>
+
+<label class="field-label">Delivery coordinates</label>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+  <input id="f-dlat" placeholder="Lat e.g. 19.0544" type="number" step="0.0001">
+  <input id="f-dlng" placeholder="Lng e.g. 72.9005" type="number" step="0.0001">
+</div>
+
       <label class="field-label">Order notes (optional)</label>
       <input id="f-notes" placeholder="Handle with care, call before delivery…">
 
@@ -400,13 +412,17 @@ async function createOrder() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        merchant_id:      parseInt(merchantId),
-        customer_name:    customer,
-        customer_phone:   phone || null,
-        pickup_address:   pickup,
-        delivery_address: delivery,
-        notes:            notes || null
-      })
+  merchant_id:      parseInt(merchantId),
+  customer_name:    customer,
+  customer_phone:   phone || null,
+  pickup_address:   pickup,
+  delivery_address: delivery,
+  pickup_lat:       parseFloat(document.getElementById('f-plat').value) || null,
+  pickup_lng:       parseFloat(document.getElementById('f-plng').value) || null,
+  delivery_lat:     parseFloat(document.getElementById('f-dlat').value) || null,
+  delivery_lng:     parseFloat(document.getElementById('f-dlng').value) || null,
+  notes:            notes || null
+})
     });
     const data = await res.json();
     if (res.ok) {

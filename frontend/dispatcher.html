@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FleetPulse Dispatcher Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{
 --bg:#0D1117;
@@ -144,7 +145,6 @@ body{ background:var(--bg); color:var(--text); }
 .status-label.busy{ color:#D29922; }
 .status-label.offline{ color:#94A3B8; }
 
-/* ADD RIDER FORM */
 .add-form{ margin-top:16px; }
 .add-form input{
   width:100%; padding:10px 14px; margin-bottom:8px;
@@ -161,7 +161,6 @@ body{ background:var(--bg); color:var(--text); }
 }
 .add-form button:hover{ transform:translateY(-2px); box-shadow:0 0 20px rgba(255,107,53,.4); }
 
-/* MODAL */
 .modal-overlay{
   position:fixed; inset:0; background:rgba(0,0,0,.7);
   backdrop-filter:blur(4px); z-index:200;
@@ -199,7 +198,6 @@ body{ background:var(--bg); color:var(--text); }
 }
 .modal-cancel:hover{ color:white; }
 
-/* TOAST */
 #toast{
   position:fixed; bottom:24px; right:24px; padding:14px 20px;
   border-radius:12px; font-size:13px; font-weight:600;
@@ -213,6 +211,71 @@ body{ background:var(--bg); color:var(--text); }
 .filter-tabs{ display:flex; gap:4px; background:#1B2430; padding:3px; border-radius:8px; margin-bottom:16px; }
 .filter-tab{ padding:5px 14px; border-radius:6px; font-size:12px; font-weight:500; cursor:pointer; color:var(--muted); background:none; border:none; font-family:'Inter',sans-serif; transition:.15s; }
 .filter-tab.active{ background:var(--card); color:var(--text); }
+
+/* ── MAP ── */
+.map-section{
+  margin-top:30px; background:var(--card);
+  border-radius:20px; border:1px solid var(--border); overflow:hidden;
+}
+.map-header{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:20px 24px; border-bottom:1px solid var(--border);
+}
+.map-header h2{ margin:0; }
+.map-sub{ font-size:12px; color:var(--muted); margin-top:4px; }
+.map-legend{ display:flex; gap:16px; flex-wrap:wrap; }
+.legend-item{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
+.legend-dot{ width:10px; height:10px; border-radius:50%; }
+.legend-dot.available{ background:#3FB950; }
+.legend-dot.busy      { background:#D29922; }
+.legend-dot.order     { background:#FF6B35; }
+#fleet-map{ height:420px; width:100%; z-index:1; }
+.leaflet-container{ background:#1B2430; font-family:'Inter',sans-serif; }
+.leaflet-popup-content-wrapper{
+  background:#161B22; color:#F8FAFC;
+  border:1px solid #26303C; border-radius:10px; box-shadow:none;
+}
+.leaflet-popup-tip{ background:#161B22; }
+.leaflet-popup-content{ margin:10px 14px; font-size:13px; line-height:1.6; }
+
+/* ANALYTICS */
+.analytics-section{
+  margin-top:30px;
+}
+.analytics-header{
+  display:flex; justify-content:space-between;
+  align-items:center; margin-bottom:20px;
+}
+.analytics-header h2{ margin:0; font-size:22px; }
+.analytics-sub{ font-size:12px; color:var(--muted); margin-top:4px; }
+.analytics-grid{
+  display:grid;
+  grid-template-columns:1fr 1.6fr 1fr;
+  gap:20px;
+}
+.chart-card{
+  background:var(--card); border:1px solid var(--border);
+  border-radius:20px; padding:24px; transition:.3s;
+}
+.chart-card:hover{
+  box-shadow:0 0 25px rgba(255,107,53,.12);
+  border-color:rgba(255,107,53,.25);
+}
+.chart-title{
+  font-size:14px; font-weight:600;
+  color:var(--text); margin-bottom:4px;
+}
+.chart-legend{
+  display:flex; flex-wrap:wrap; gap:10px;
+  margin:10px 0 14px;
+}
+.chart-legend-item{
+  display:flex; align-items:center; gap:5px;
+  font-size:11px; color:var(--muted);
+}
+.chart-legend-box{
+  width:10px; height:10px; border-radius:2px;
+}
 
 @media(max-width:900px){
   .grid{ grid-template-columns:1fr; }
@@ -268,7 +331,6 @@ body{ background:var(--bg); color:var(--text); }
   </section>
 
   <section class="grid">
-
     <div class="queue-card">
       <div class="queue-header">
         <h2>Dispatch Queue</h2>
@@ -306,11 +368,56 @@ body{ background:var(--bg); color:var(--text); }
         </div>
       </div>
     </div>
-
   </section>
+
+  <section class="map-section">
+    <div class="map-header">
+      <div>
+        <h2>Live Fleet Map</h2>
+        <p class="map-sub">Mumbai · auto-updates every 10s</p>
+      </div>
+      <div class="map-legend">
+        <span class="legend-item"><span class="legend-dot available"></span> Available</span>
+        <span class="legend-item"><span class="legend-dot busy"></span> Busy</span>
+        <span class="legend-item"><span class="legend-dot order"></span> Pickup point</span>
+      </div>
+    </div>
+    <div id="fleet-map"></div>
+  </section>
+
+  <section class="analytics-section">
+    <div class="analytics-header">
+      <div>
+        <h2>Analytics Overview</h2>
+        <p class="analytics-sub">Live insights from your fleet data</p>
+      </div>
+    </div>
+    <div class="analytics-grid">
+      <div class="chart-card">
+        <div class="chart-title">Orders by Status</div>
+        <div class="chart-legend" id="status-legend"></div>
+        <div style="position:relative;height:220px">
+          <canvas id="statusChart" role="img" aria-label="Donut chart showing orders by status"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Orders Last 14 Days</div>
+        <div style="position:relative;height:260px;margin-top:16px">
+          <canvas id="timelineChart" role="img" aria-label="Bar chart showing orders created per day"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Rider Utilization</div>
+        <div class="chart-legend" id="rider-legend"></div>
+        <div style="position:relative;height:220px">
+          <canvas id="riderChart" role="img" aria-label="Bar chart showing rider availability status"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </div>
 
-<!-- Assign Modal -->
 <div class="modal-overlay" id="assign-modal">
   <div class="modal">
     <h3>Assign a Rider</h3>
@@ -324,11 +431,14 @@ body{ background:var(--bg); color:var(--text); }
 
 <div id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 const API = 'http://localhost:8000';
 let allOrders = [], allRiders = [];
 let currentFilter = 'all';
 let assigningOrderId = null, selectedRiderId = null;
+let map = null, mapMarkers = [];
 
 async function loadData() {
   try {
@@ -342,6 +452,9 @@ async function loadData() {
     renderOrders();
     renderActivity();
     renderFleet();
+    initMap();
+    updateMap();
+    renderCharts(); // ← add this line
   } catch(e) {
     toast('Cannot reach API — is the server running?', 'error');
   }
@@ -357,12 +470,10 @@ function renderStats() {
 function renderOrders() {
   const el = document.getElementById('orders-list');
   const filtered = currentFilter === 'all' ? allOrders : allOrders.filter(o => o.status === currentFilter);
-
   if (!filtered.length) {
     el.innerHTML = `<div class="empty">No ${currentFilter === 'all' ? '' : currentFilter} orders right now</div>`;
     return;
   }
-
   el.innerHTML = filtered.map(o => `
     <div class="order ${o.status}">
       <div class="order-info">
@@ -504,8 +615,265 @@ function toast(msg, type = 'success') {
   setTimeout(() => el.className = '', 3500);
 }
 
+// ── MAP ──
+function initMap() {
+  if (map) return;
+  map = L.map('fleet-map').setView([19.0760, 72.8777], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 18,
+  }).addTo(map);
+}
+
+function makeIcon(color, label) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      background:${color}; width:36px; height:36px; border-radius:50%;
+      border:3px solid rgba(255,255,255,0.25);
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px; font-weight:700; color:white;
+      box-shadow:0 2px 8px rgba(0,0,0,0.4);
+      font-family:'Inter',sans-serif;">${label}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -20],
+  });
+}
+
+function updateMap() {
+  if (!map) return;
+  mapMarkers.forEach(m => map.removeLayer(m));
+  mapMarkers = [];
+
+  // Rider pins
+  allRiders.forEach(rider => {
+    const color = rider.status === 'available' ? '#3FB950'
+                : rider.status === 'busy'      ? '#D29922'
+                : '#4A5568';
+    const marker = L.marker([rider.latitude, rider.longitude], {
+      icon: makeIcon(color, rider.name.charAt(0).toUpperCase())
+    }).addTo(map);
+    marker.bindPopup(`
+      <strong>${rider.name}</strong><br>
+      Status: ${rider.status}<br>
+      📞 ${rider.phone}
+    `);
+    mapMarkers.push(marker);
+  });
+
+  // Order pins + route lines
+  allOrders.forEach(order => {
+    if (!order.pickup_lat || !order.pickup_lng) return;
+
+    if (order.status === 'pending') {
+      const marker = L.marker([order.pickup_lat, order.pickup_lng], {
+        icon: makeIcon('#FF6B35', '📦')
+      }).addTo(map);
+      marker.bindPopup(`
+        <strong>#ORD-${String(order.id).padStart(4,'0')}</strong><br>
+        ${order.customer_name}<br>
+        📍 ${order.pickup_address}
+      `);
+      mapMarkers.push(marker);
+    }
+
+    if ((order.status === 'assigned' || order.status === 'in_transit')
+        && order.delivery_lat && order.delivery_lng) {
+      const line = L.polyline(
+        [[order.pickup_lat, order.pickup_lng], [order.delivery_lat, order.delivery_lng]],
+        {
+          color: order.status === 'in_transit' ? '#FF6B35' : '#58A6FF',
+          weight: 3, opacity: 0.7,
+          dashArray: order.status === 'in_transit' ? null : '6,6'
+        }
+      ).addTo(map);
+      line.bindPopup(`
+        <strong>#ORD-${String(order.id).padStart(4,'0')}</strong><br>
+        🏍 ${order.rider_name || 'Assigned'}<br>
+        ${order.pickup_address} → ${order.delivery_address}
+      `);
+      mapMarkers.push(line);
+
+      const dMarker = L.marker([order.delivery_lat, order.delivery_lng], {
+        icon: makeIcon('#58A6FF', '🎯')
+      }).addTo(map);
+      dMarker.bindPopup(`Delivery: ${order.delivery_address}`);
+      mapMarkers.push(dMarker);
+    }
+  });
+}
+
 loadData();
 setInterval(loadData, 8000);
+
+// ── CHARTS ──
+let statusChart = null, timelineChart = null, riderChart = null;
+
+function renderCharts() {
+  renderStatusChart();
+  renderTimelineChart();
+  renderRiderChart();
+}
+
+function renderStatusChart() {
+  const counts = {
+    pending:    allOrders.filter(o => o.status === 'pending').length,
+    assigned:   allOrders.filter(o => o.status === 'assigned').length,
+    in_transit: allOrders.filter(o => o.status === 'in_transit').length,
+    delivered:  allOrders.filter(o => o.status === 'delivered').length,
+  };
+  const labels  = ['Pending', 'Assigned', 'In Transit', 'Delivered'];
+  const data    = [counts.pending, counts.assigned, counts.in_transit, counts.delivered];
+  const colors  = ['#D29922', '#58A6FF', '#FF6B35', '#3FB950'];
+  const total   = data.reduce((a, b) => a + b, 0);
+
+  // Legend
+  document.getElementById('status-legend').innerHTML = labels.map((l, i) => `
+    <div class="chart-legend-item">
+      <div class="chart-legend-box" style="background:${colors[i]}"></div>
+      ${l} (${data[i]})
+    </div>
+  `).join('');
+
+  const ctx = document.getElementById('statusChart').getContext('2d');
+  if (statusChart) statusChart.destroy();
+  statusChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors,
+        borderColor: '#161B22',
+        borderWidth: 3,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.raw} (${total ? Math.round(ctx.raw/total*100) : 0}%)`
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderTimelineChart() {
+  // Build last 14 days
+  const days = [];
+  const counts = {};
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const label = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    days.push({ key, label });
+    counts[key] = 0;
+  }
+  allOrders.forEach(o => {
+    if (!o.created_at) return;
+    const key = o.created_at.slice(0, 10);
+    if (counts[key] !== undefined) counts[key]++;
+  });
+
+  const labels = days.map(d => d.label);
+  const data   = days.map(d => counts[d.key]);
+
+  const ctx = document.getElementById('timelineChart').getContext('2d');
+  if (timelineChart) timelineChart.destroy();
+  timelineChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Orders',
+        data,
+        backgroundColor: 'rgba(255,107,53,0.7)',
+        borderColor: '#FF6B35',
+        borderWidth: 1,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: {
+            color: '#7D8590', font: { size: 10 },
+            maxRotation: 45,
+            autoSkip: false,
+          },
+          grid: { color: 'rgba(255,255,255,0.04)' }
+        },
+        y: {
+          ticks: { color: '#7D8590', font: { size: 11 }, stepSize: 1 },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          beginAtZero: true,
+        }
+      }
+    }
+  });
+}
+
+function renderRiderChart() {
+  const available = allRiders.filter(r => r.status === 'available').length;
+  const busy      = allRiders.filter(r => r.status === 'busy').length;
+  const offline   = allRiders.filter(r => r.status === 'offline').length;
+
+  const labels = ['Available', 'Busy', 'Offline'];
+  const data   = [available, busy, offline];
+  const colors = ['#3FB950', '#D29922', '#4A5568'];
+
+  document.getElementById('rider-legend').innerHTML = labels.map((l, i) => `
+    <div class="chart-legend-item">
+      <div class="chart-legend-box" style="background:${colors[i]}"></div>
+      ${l} (${data[i]})
+    </div>
+  `).join('');
+
+  const ctx = document.getElementById('riderChart').getContext('2d');
+  if (riderChart) riderChart.destroy();
+  riderChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors,
+        borderRadius: 8,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { color: '#7D8590', font: { size: 12 } },
+          grid: { display: false }
+        },
+        y: {
+          ticks: { color: '#7D8590', stepSize: 1 },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          beginAtZero: true,
+        }
+      }
+    }
+  });
+}
+
 </script>
 </body>
 </html>
