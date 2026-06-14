@@ -1,4 +1,7 @@
+from fastapi import FastAPI
 from routes import orders, riders, merchants, reviews
+
+app = FastAPI()
 
 app.include_router(orders.router)
 app.include_router(riders.router)
