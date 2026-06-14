@@ -1,22 +1,3 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from database import engine, Base
-from routes import orders, riders, merchants
-import os
-
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="FleetPulse API", version="1.0")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 from routes import orders, riders, merchants, reviews
 
 app.include_router(orders.router)
@@ -27,9 +8,16 @@ app.include_router(reviews.router)
 # Serve frontend folder — this makes your HTML files available at /app/
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
 frontend_path = os.path.abspath(frontend_path)
-app.mount("/app", StaticFiles(directory=frontend_path, html=True), name="frontend")
+if not os.path.exists(frontend_path):    
+    # On Railway, frontend is served separately via Vercel    
+    # Skip static file mounting    
+    pass
+else:    
+    app.mount("/app", StaticFiles(directory=frontend_path, html=True), name="frontend")
 
 # Root redirect — visiting localhost:8000 opens index.html automatically
 @app.get("/")
-def root():
-    return FileResponse(os.path.join(frontend_path, "index.html"))
+def root():    
+    if os.path.exists(os.path.join(frontend_path, "index.html")):        
+        return FileResponse(os.path.join(frontend_path, "index.html"))    
+    return {"message": "FleetPulse API is running", "docs": "/docs"}
