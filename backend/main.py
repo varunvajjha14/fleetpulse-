@@ -17,9 +17,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from routes import orders, riders, merchants, reviews
+
 app.include_router(orders.router)
 app.include_router(riders.router)
 app.include_router(merchants.router)
+app.include_router(reviews.router)
 
 # Serve frontend folder — this makes your HTML files available at /app/
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")

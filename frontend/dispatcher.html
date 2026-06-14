@@ -277,6 +277,36 @@ body{ background:var(--bg); color:var(--text); }
   width:10px; height:10px; border-radius:2px;
 }
 
+/* REVIEW CATEGORISER */
+.review-section{ margin-top:30px; margin-bottom:40px; }
+.review-header{ margin-bottom:20px; }
+.review-header h2{ margin:0; font-size:22px; }
+.review-sub{ font-size:12px; color:var(--muted); margin-top:4px; }
+.review-grid{ display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:20px; }
+.review-form-card{  background:var(--card); border:1px solid var(--border);  border-radius:20px; padding:24px;}
+.review-form-card textarea{  width:100%; background:#1B2430; border:1px solid var(--border);  border-radius:12px; color:var(--text); padding:14px;  font-family:'Inter',sans-serif; font-size:13px;  resize:none; outline:none; transition:border-color .2s;  line-height:1.6;}
+.review-form-card textarea:focus{ border-color:var(--accent); }
+.review-form-card textarea::placeholder{ color:#4A5568; }
+.review-btn{  width:100%; margin-top:12px; padding:12px; border:none;  border-radius:12px; background:linear-gradient(135deg,#FF6B35,#FF8C42);  color:white; font-weight:700; font-size:14px; cursor:pointer;  font-family:'Inter',sans-serif; transition:.3s;}
+.review-btn:hover{ transform:translateY(-2px); box-shadow:0 0 20px rgba(255,107,53,.4); }
+.review-btn:disabled{ background:#2A3142; color:#4A5568; cursor:not-allowed; transform:none; box-shadow:none; }
+.review-result-card{  background:var(--card); border:1px solid var(--border);  border-radius:20px; padding:24px;  display:flex; flex-direction:column; align-items:center;  justify-content:center; text-align:center; gap:12px;  transition:border-color .3s;}
+.review-result-card.Positive       { border-color:#3FB950; }
+.review-result-card.Delayed        { border-color:#D29922; }
+.review-result-card.Rider          { border-color:#58A6FF; }
+.review-result-card.Damaged        { border-color:#F85149; }
+.review-result-card.Wrong          { border-color:#F85149; }
+.review-result-card.Other          { border-color:var(--muted); }
+.result-icon{ font-size:48px; }
+.result-category{ font-size:20px; font-weight:700; }
+.result-review{ font-size:12px; color:var(--muted); line-height:1.6; font-style:italic; }
+.review-history-card{  background:var(--card); border:1px solid var(--border);  border-radius:20px; padding:24px;}
+.review-history-title{ font-size:14px; font-weight:600; margin-bottom:14px; }
+.history-item{  display:flex; align-items:flex-start; gap:10px;  padding:10px 0; border-bottom:1px solid var(--border); font-size:12px;}
+.history-item:last-child{ border:none; }.history-icon{ font-size:18px; flex-shrink:0; }
+.history-text{ color:var(--muted); line-height:1.5; }
+.history-text strong{ color:var(--text); font-weight:600; display:block; margin-bottom:2px; }
+
 @media(max-width:900px){
   .grid{ grid-template-columns:1fr; }
   .hero h1{ font-size:32px; }
@@ -411,6 +441,34 @@ body{ background:var(--bg); color:var(--text); }
         <div class="chart-legend" id="rider-legend"></div>
         <div style="position:relative;height:220px">
           <canvas id="riderChart" role="img" aria-label="Bar chart showing rider availability status"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="review-section">
+    <div class="review-header">
+      <div>
+        <h2>AI Review Categoriser</h2>
+        <p class="review-sub">Paste customer feedback — AI instantly tags it</p>
+      </div>
+    </div>
+    <div class="review-grid">
+      <div class="review-form-card">
+        <textarea id="review-input" placeholder="e.g. The rider was very rude and threw my package at the door…" rows="5"></textarea>
+        <button class="review-btn" onclick="categoriseReview()">
+          Categorise with AI ✨
+        </button>
+      </div>
+      <div class="review-result-card" id="review-result" style="display:none">
+        <div class="result-icon" id="result-icon"></div>
+        <div class="result-category" id="result-category"></div>
+        <div class="result-review" id="result-review"></div>
+      </div>
+      <div class="review-history-card">
+        <div class="review-history-title">Recent Tags</div>
+        <div id="review-history">
+          <div class="activity">No reviews categorised yet</div>
         </div>
       </div>
     </div>
@@ -872,6 +930,64 @@ function renderRiderChart() {
       }
     }
   });
+}
+
+// ── REVIEW CATEGORISER ──
+let reviewHistory = [];
+
+async function categoriseReview() {
+  const text = document.getElementById('review-input').value.trim();
+  if (!text) { toast('Enter a review first', 'error'); return; }
+  const btn = document.querySelector('.review-btn');
+  btn.disabled = true;
+  btn.textContent = 'Analysing…';
+  try {
+    const res = await fetch(`${API}/reviews/categorise`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ review: text })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      // Show result card
+      const resultCard = document.getElementById('review-result');
+      resultCard.style.display = 'flex';
+      resultCard.className = 'review-result-card ' + data.category.split(' ')[0];
+      document.getElementById('result-icon').textContent     = data.icon;
+      document.getElementById('result-category').textContent = data.category;
+      document.getElementById('result-review').textContent   = `"${data.review}"`;
+      // Add to history
+      reviewHistory.unshift(data);
+      if (reviewHistory.length > 5) reviewHistory.pop();
+      renderReviewHistory();
+      toast(`Tagged as: ${data.category}`, 'success');
+      document.getElementById('review-input').value = '';
+    } else {
+      toast(data.detail || 'Categorisation failed', 'error');
+    }
+  } catch(e) {
+    toast('Network error — is server running?', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Categorise with AI ✨';
+  }
+}
+
+function renderReviewHistory() {
+  const el = document.getElementById('review-history');
+  if (!reviewHistory.length) {
+    el.innerHTML = '<div class="activity">No reviews categorised yet</div>';
+    return;
+  }
+  el.innerHTML = reviewHistory.map(r => `
+    <div class="history-item">
+      <span class="history-icon">${r.icon}</span>
+      <div class="history-text">
+        <strong>${r.category}</strong>
+        ${r.review.length > 60 ? r.review.slice(0, 60) + '…' : r.review}
+      </div>
+    </div>
+  `).join('');
 }
 
 </script>
