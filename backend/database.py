@@ -8,7 +8,7 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./fleetpulse.db")
 
-print(f"DATABASE_URL loaded: {DATABASE_URL[:30] if DATABASE_URL else 'NONE'}")
+
 
 # Fix for Railway PostgreSQL URL format
 if DATABASE_URL.startswith("postgres://"):
