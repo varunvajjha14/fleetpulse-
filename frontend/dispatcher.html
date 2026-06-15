@@ -341,11 +341,11 @@ body{ background:var(--bg); color:var(--text); }
 <nav class="navbar">
   <div class="logo">Fleet<span>Pulse</span></div>
   <div class="nav-links">
-  <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">Dashboard</a>
-  <a href="#" onclick="document.getElementById('queue-card')?.scrollIntoView({behavior:'smooth', block:'start'}); return false;">Riders</a>
-  <a href="#" onclick="document.getElementById('queue-card')?.scrollIntoView({behavior:'smooth', block:'start'}); return false;">Orders</a>
-  <a href="#" onclick="document.getElementById('analytics-section')?.scrollIntoView({behavior:'smooth', block:'start'}); return false;">Analytics</a>
-</div>
+    <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">Dashboard</a>
+    <a href="#" onclick="document.getElementById('queue-card')?.scrollIntoView({behavior:'smooth', block:'start'}); return false;">Riders</a>
+    <a href="#" onclick="document.getElementById('queue-card')?.scrollIntoView({behavior:'smooth', block:'start'}); return false;">Orders</a>
+    <a href="#" onclick="document.getElementById('analytics-section')?.scrollIntoView({behavior:'smooth', block:'start'}); return false;">Analytics</a>
+  </div>
   <div class="nav-right">
     <a href="/app/merchant.html">Merchant Portal →</a>
   </div>
@@ -356,7 +356,7 @@ body{ background:var(--bg); color:var(--text); }
   <section class="hero">
     <h1>Dispatcher Control Center 🚚</h1>
     <p>Monitor rider activity, assign deliveries, track active orders and manage fleet operations efficiently from a single dashboard.</p>
-    <button onclick="document.getElementById('orders-list').scrollIntoView({behavior:'smooth'})">View Dispatch Queue</button>
+    <button onclick="document.getElementById('queue-card').scrollIntoView({behavior:'smooth', block:'start'})">View Dispatch Queue</button>
   </section>
 
   <section class="stats">
@@ -382,8 +382,8 @@ body{ background:var(--bg); color:var(--text); }
     </div>
   </section>
 
-  <section class="grid">
-    <div class="queue-card" id="queue-card"></div>
+  <section class="grid" id="queue-card">
+    <div class="queue-card">
       <div class="queue-header">
         <h2>Dispatch Queue</h2>
         <div style="display:flex; gap:8px; align-items:center">
