@@ -75,8 +75,6 @@ body{ background:var(--bg); color:var(--text); }
 }
 .queue-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
 .queue-card h2{ margin:0; }
-.refresh-btn{ font-size:12px; color:var(--muted); background:none; border:none; cursor:pointer; font-family:'Inter',sans-serif; transition:color .2s; }
-.refresh-btn:hover{ color:white; }
 
 .order{
   display:flex; justify-content:space-between; align-items:center;
@@ -314,6 +312,28 @@ body{ background:var(--bg); color:var(--text); }
 }
 
 .auto-assign-btn{  padding:7px 14px; border:none; border-radius:8px;  background:linear-gradient(135deg,#FF6B35,#FF8C42);  color:white; font-size:12px; font-weight:600;  cursor:pointer; font-family:'Inter',sans-serif; transition:.3s;}.auto-assign-btn:hover{ transform:translateY(-2px); box-shadow:0 0 15px rgba(255,107,53,.4); }.auto-assign-btn:disabled{ background:#2A3142; color:#4A5568; cursor:not-allowed; transform:none; box-shadow:none; }
+
+.custom-refresh-btn {
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #1B2430;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: .2s;
+}
+.custom-refresh-btn:hover {
+  color: white;
+  border-color: var(--muted);
+  background: var(--card-hover);
+}
+.queue-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+}
 </style>
 </head>
 <body>
@@ -321,10 +341,10 @@ body{ background:var(--bg); color:var(--text); }
 <nav class="navbar">
   <div class="logo">Fleet<span>Pulse</span></div>
   <div class="nav-links">
-    <a href="#">Dashboard</a>
-    <a href="#">Riders</a>
-    <a href="#">Orders</a>
-    <a href="#">Analytics</a>
+    <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">Dashboard</a>
+    <a href="#riders-section" onclick="document.getElementById('riders-section').scrollIntoView({behavior:'smooth'}); return false;">Riders</a>
+    <a href="#orders-list" onclick="document.getElementById('orders-list').scrollIntoView({behavior:'smooth'}); return false;">Orders</a>
+    <a href="#analytics-section" onclick="document.getElementById('analytics-section').scrollIntoView({behavior:'smooth'}); return false;">Analytics</a>
   </div>
   <div class="nav-right">
     <a href="/app/merchant.html">Merchant Portal →</a>
@@ -336,7 +356,7 @@ body{ background:var(--bg); color:var(--text); }
   <section class="hero">
     <h1>Dispatcher Control Center 🚚</h1>
     <p>Monitor rider activity, assign deliveries, track active orders and manage fleet operations efficiently from a single dashboard.</p>
-    <button onclick="document.querySelector('.queue-card').scrollIntoView({behavior:'smooth'})">View Dispatch Queue</button>
+    <button onclick="document.getElementById('orders-list').scrollIntoView({behavior:'smooth'})">View Dispatch Queue</button>
   </section>
 
   <section class="stats">
@@ -364,7 +384,13 @@ body{ background:var(--bg); color:var(--text); }
 
   <section class="grid">
     <div class="queue-card">
-      <div class="queue-header">  <h2>Dispatch Queue</h2>  <div style="display:flex;gap:8px;align-items:center">    <button class="auto-assign-btn" id="auto-assign-btn" onclick="autoAssignAll()">⚡ Auto-Assign All</button>    <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>  </div></div>
+      <div class="queue-header">
+        <h2>Dispatch Queue</h2>
+        <div style="display:flex; gap:8px; align-items:center">
+          <button class="auto-assign-btn" id="auto-assign-btn" onclick="autoAssignAll()">⚡ Auto-Assign All</button>
+          <button class="custom-refresh-btn" onclick="loadData()">↻ Refresh</button>
+        </div>
+      </div>
       <div class="filter-tabs">
         <button class="filter-tab active" onclick="setFilter('all',this)">All</button>
         <button class="filter-tab" onclick="setFilter('pending',this)">Pending</button>
@@ -385,9 +411,9 @@ body{ background:var(--bg); color:var(--text); }
         </div>
       </div>
 
-      <div class="sidebar-card">
+      <div class="sidebar-card" id="fleet-list">
         <h2>Fleet Status</h2>
-        <div id="fleet-list">
+        <div id="fleet-list-inner">
           <div class="activity">Loading riders…</div>
         </div>
         <div class="add-form" style="margin-top:20px">
@@ -399,7 +425,7 @@ body{ background:var(--bg); color:var(--text); }
     </div>
   </section>
 
-  <section class="map-section">
+  <section class="map-section" id="riders-section">
     <div class="map-header">
       <div>
         <h2>Live Fleet Map</h2>
@@ -414,7 +440,7 @@ body{ background:var(--bg); color:var(--text); }
     <div id="fleet-map"></div>
   </section>
 
-  <section class="analytics-section">
+  <section class="analytics-section" id="analytics-section">
     <div class="analytics-header">
       <div>
         <h2>Analytics Overview</h2>
@@ -511,7 +537,7 @@ async function loadData() {
     renderFleet();
     initMap();
     updateMap();
-    renderCharts(); // ← add this line
+    renderCharts();
   } catch(e) {
     toast('Cannot reach API — is the server running?', 'error');
   }
@@ -565,7 +591,7 @@ function renderActivity() {
 }
 
 function renderFleet() {
-  const el = document.getElementById('fleet-list');
+  const el = document.getElementById('fleet-list-inner');
   if (!allRiders.length) { el.innerHTML = '<div class="activity">No riders yet</div>'; return; }
   el.innerHTML = allRiders.map(r => `
     <div class="rider-status">
@@ -824,7 +850,6 @@ function renderStatusChart() {
 }
 
 function renderTimelineChart() {
-  // Build last 14 days
   const days = [];
   const counts = {};
   for (let i = 13; i >= 0; i--) {
@@ -948,18 +973,16 @@ async function categoriseReview() {
     });
     const data = await res.json();
     if (res.ok) {
-      // Show result card
       const resultCard = document.getElementById('review-result');
       resultCard.style.display = 'flex';
       resultCard.className = 'review-result-card ' + data.category.split(' ')[0];
       document.getElementById('result-icon').textContent     = data.icon;
       document.getElementById('result-category').textContent = data.category;
       document.getElementById('result-review').textContent   = `"${data.review}"`;
-      // Add to history
       reviewHistory.unshift(data);
       if (reviewHistory.length > 5) reviewHistory.pop();
       renderReviewHistory();
-      toast(`Tagged as: ${data.category}`, 'success');
+      toast(`Taggged as: ${data.category}`, 'success');
       document.getElementById('review-input').value = '';
     } else {
       toast(data.detail || 'Categorisation failed', 'error');
@@ -989,7 +1012,30 @@ function renderReviewHistory() {
   `).join('');
 }
 
-async function autoAssignAll() {  const btn = document.getElementById('auto-assign-btn');  btn.disabled = true;  btn.textContent = '⏳ Assigning…';  try {    const res = await fetch(`${API}/orders/auto-assign-all`, { method: 'POST' });    const data = await res.json();    if (res.ok) {      if (data.assigned === 0) {        toast(data.message, 'error');      } else {        toast(`⚡ ${data.message}`, 'success');      }      loadData();    } else {      toast(data.detail || 'Auto-assign failed', 'error');    }  } catch(e) {    toast('Network error', 'error');  } finally {    btn.disabled = false;    btn.textContent = '⚡ Auto-Assign All';  }}
+async function autoAssignAll() {
+  const btn = document.getElementById('auto-assign-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Assigning…';
+  try {
+    const res = await fetch(`${API}/orders/auto-assign-all`, { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) {
+      if (data.assigned === 0) {
+        toast(data.message, 'error');
+      } else {
+        toast(`⚡ ${data.message}`, 'success');
+      }
+      loadData();
+    } else {
+      toast(data.detail || 'Auto-assign failed', 'error');
+    }
+  } catch(e) {
+    toast('Network error', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Auto-Assign All';
+  }
+}
 </script>
 </body>
 </html>
