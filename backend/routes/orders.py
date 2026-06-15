@@ -56,50 +56,7 @@ def create_order(data: OrderCreate, db: Session = Depends(get_db)):
     db.refresh(order)
     return {"id": order.id, "status": order.status, "message": "Order created"}
 
-@router.post("/{order_id}/assign")
-def assign_order(order_id: int, body: AssignOrder, db: Session = Depends(get_db)):
-    # Row-level locking: prevents two dispatchers assigning the same order at once
-    try:
-        order = db.query(Order).filter(Order.id == order_id).with_for_update().first()
-        if not order:
-            raise HTTPException(status_code=404, detail="Order not found")
-        if order.status != OrderStatus.pending:
-            raise HTTPException(status_code=400, detail=f"Order is already {order.status}")
-
-        rider = db.query(Rider).filter(Rider.id == body.rider_id).with_for_update().first()
-        if not rider:
-            raise HTTPException(status_code=404, detail="Rider not found")
-        if rider.status != RiderStatus.available:
-            raise HTTPException(status_code=400, detail="Rider is not available")
-
-        order.status = OrderStatus.assigned
-        rider.status = RiderStatus.busy
-        payout = _estimate_payout(order)
-        trip = Trip(order_id=order_id, rider_id=body.rider_id, estimated_payout=payout)
-        db.add(trip)
-        db.commit()
-        return {"message": "Assigned successfully", "estimated_payout": payout}
-    except HTTPException:
-        db.rollback()
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/{order_id}/status")
-def update_status(order_id: int, status: str, db: Session = Depends(get_db)):
-    order = db.query(Order).filter(Order.id == order_id).first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    order.status = OrderStatus(status)
-    if status == "delivered" and order.trip:
-        order.trip.delivered_at = datetime.utcnow()
-        if order.trip.rider:
-            order.trip.rider.status = RiderStatus.available
-    db.commit()
-    return {"message": f"Status updated to {status}"}
-
-
+# ── MOVED THIS ABOVE PATH PARAMETERS TO PREVENT OVERLAPPING ──
 @router.post("/auto-assign-all")
 def auto_assign_all(db: Session = Depends(get_db)):
     try:
@@ -163,6 +120,49 @@ def auto_assign_all(db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/{order_id}/assign")
+def assign_order(order_id: int, body: AssignOrder, db: Session = Depends(get_db)):
+    # Row-level locking: prevents two dispatchers assigning the same order at once
+    try:
+        order = db.query(Order).filter(Order.id == order_id).with_for_update().first()
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        if order.status != OrderStatus.pending:
+            raise HTTPException(status_code=400, detail=f"Order is already {order.status}")
+
+        rider = db.query(Rider).filter(Rider.id == body.rider_id).with_for_update().first()
+        if not rider:
+            raise HTTPException(status_code=404, detail="Rider not found")
+        if rider.status != RiderStatus.available:
+            raise HTTPException(status_code=400, detail="Rider is not available")
+
+        order.status = OrderStatus.assigned
+        rider.status = RiderStatus.busy
+        payout = _estimate_payout(order)
+        trip = Trip(order_id=order_id, rider_id=body.rider_id, estimated_payout=payout)
+        db.add(trip)
+        db.commit()
+        return {"message": "Assigned successfully", "estimated_payout": payout}
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/{order_id}/status")
+def update_status(order_id: int, status: str, db: Session = Depends(get_db)):
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    order.status = OrderStatus(status)
+    if status == "delivered" and order.trip:
+        order.trip.delivered_at = datetime.utcnow()
+        if order.trip.rider:
+            order.trip.rider.status = RiderStatus.available
+    db.commit()
+    return {"message": f"Status updated to {status}"}
 
 def _estimate_payout(order: Order) -> float:
     if order.pickup_lat and order.delivery_lat:
