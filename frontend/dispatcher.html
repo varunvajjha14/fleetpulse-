@@ -341,11 +341,11 @@ body{ background:var(--bg); color:var(--text); }
 <nav class="navbar">
   <div class="logo">Fleet<span>Pulse</span></div>
   <div class="nav-links">
-    <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">Dashboard</a>
-    <a href="#riders-section" onclick="document.getElementById('riders-section').scrollIntoView({behavior:'smooth'}); return false;">Riders</a>
-    <a href="#orders-list" onclick="document.getElementById('orders-list').scrollIntoView({behavior:'smooth'}); return false;">Orders</a>
-    <a href="#analytics-section" onclick="document.getElementById('analytics-section').scrollIntoView({behavior:'smooth'}); return false;">Analytics</a>
-  </div>
+  <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">Dashboard</a>
+  <a href="#" onclick="document.getElementById('queue-card')?.scrollIntoView({behavior:'smooth', block:'start'}); return false;">Riders</a>
+  <a href="#" onclick="document.getElementById('queue-card')?.scrollIntoView({behavior:'smooth', block:'start'}); return false;">Orders</a>
+  <a href="#" onclick="document.getElementById('analytics-section')?.scrollIntoView({behavior:'smooth', block:'start'}); return false;">Analytics</a>
+</div>
   <div class="nav-right">
     <a href="/app/merchant.html">Merchant Portal →</a>
   </div>
@@ -383,7 +383,7 @@ body{ background:var(--bg); color:var(--text); }
   </section>
 
   <section class="grid">
-    <div class="queue-card">
+    <div class="queue-card" id="queue-card"></div>
       <div class="queue-header">
         <h2>Dispatch Queue</h2>
         <div style="display:flex; gap:8px; align-items:center">
