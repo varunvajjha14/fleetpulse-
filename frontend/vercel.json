@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/app/merchant.html", "destination": "/merchant.html" },
+    { "source": "/app/dispatcher.html", "destination": "/dispatcher.html" },
+    { "source": "/app/(.*)", "destination": "/$1" }
+  ]
+}
