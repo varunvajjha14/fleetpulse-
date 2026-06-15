@@ -99,6 +99,71 @@ def update_status(order_id: int, status: str, db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"Status updated to {status}"}
 
+
+@router.post("/auto-assign-all")
+def auto_assign_all(db: Session = Depends(get_db)):
+    try:
+        # Get all pending orders oldest first — FIFO queue
+        pending_orders = db.query(Order)\
+            .filter(Order.status == OrderStatus.pending)\
+            .order_by(Order.created_at.asc())\
+            .with_for_update()\
+            .all()
+
+        if not pending_orders:
+            return {"message": "No pending orders to assign", "assigned": 0, "details": []}
+
+        # Get all available riders
+        available_riders = db.query(Rider)\
+            .filter(Rider.status == RiderStatus.available)\
+            .with_for_update()\
+            .all()
+
+        if not available_riders:
+            return {"message": "No available riders right now", "assigned": 0, "details": []}
+
+        assigned = []
+        rider_index = 0
+
+        for order in pending_orders:
+            if rider_index >= len(available_riders):
+                break  # No more riders available
+
+            rider = available_riders[rider_index]
+
+            order.status = OrderStatus.assigned
+            rider.status = RiderStatus.busy
+
+            payout = _estimate_payout(order)
+            trip = Trip(
+                order_id=order.id,
+                rider_id=rider.id,
+                estimated_payout=payout
+            )
+            db.add(trip)
+
+            assigned.append({
+                "order_id": order.id,
+                "rider_name": rider.name,
+                "estimated_payout": payout
+            })
+
+            rider_index += 1
+
+        db.commit()
+
+        skipped = len(pending_orders) - len(assigned)
+        return {
+            "message": f"{len(assigned)} order(s) assigned successfully",
+            "assigned": len(assigned),
+            "skipped": skipped,
+            "details": assigned
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
 def _estimate_payout(order: Order) -> float:
     if order.pickup_lat and order.delivery_lat:
         from ml.predictor import predict_payout

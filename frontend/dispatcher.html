@@ -312,6 +312,8 @@ body{ background:var(--bg); color:var(--text); }
   .hero h1{ font-size:32px; }
   .nav-links{ display:none; }
 }
+
+.auto-assign-btn{  padding:7px 14px; border:none; border-radius:8px;  background:linear-gradient(135deg,#FF6B35,#FF8C42);  color:white; font-size:12px; font-weight:600;  cursor:pointer; font-family:'Inter',sans-serif; transition:.3s;}.auto-assign-btn:hover{ transform:translateY(-2px); box-shadow:0 0 15px rgba(255,107,53,.4); }.auto-assign-btn:disabled{ background:#2A3142; color:#4A5568; cursor:not-allowed; transform:none; box-shadow:none; }
 </style>
 </head>
 <body>
@@ -362,10 +364,7 @@ body{ background:var(--bg); color:var(--text); }
 
   <section class="grid">
     <div class="queue-card">
-      <div class="queue-header">
-        <h2>Dispatch Queue</h2>
-        <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
-      </div>
+      <div class="queue-header">  <h2>Dispatch Queue</h2>  <div style="display:flex;gap:8px;align-items:center">    <button class="auto-assign-btn" id="auto-assign-btn" onclick="autoAssignAll()">⚡ Auto-Assign All</button>    <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>  </div></div>
       <div class="filter-tabs">
         <button class="filter-tab active" onclick="setFilter('all',this)">All</button>
         <button class="filter-tab" onclick="setFilter('pending',this)">Pending</button>
@@ -990,6 +989,7 @@ function renderReviewHistory() {
   `).join('');
 }
 
+async function autoAssignAll() {  const btn = document.getElementById('auto-assign-btn');  btn.disabled = true;  btn.textContent = '⏳ Assigning…';  try {    const res = await fetch(`${API}/orders/auto-assign-all`, { method: 'POST' });    const data = await res.json();    if (res.ok) {      if (data.assigned === 0) {        toast(data.message, 'error');      } else {        toast(`⚡ ${data.message}`, 'success');      }      loadData();    } else {      toast(data.detail || 'Auto-assign failed', 'error');    }  } catch(e) {    toast('Network error', 'error');  } finally {    btn.disabled = false;    btn.textContent = '⚡ Auto-Assign All';  }}
 </script>
 </body>
 </html>
