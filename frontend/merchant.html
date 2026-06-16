@@ -173,10 +173,10 @@ input::placeholder{ color:#4A5568; }
 <nav class="navbar">
   <div class="logo">Fleet<span>Pulse</span></div>
   <div class="nav-links">
-    <a href="#">Dashboard</a>
-    <a href="#">Orders</a>
-    <a href="#">Analytics</a>
-    <a href="#">Profile</a>
+    <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">Dashboard</a>
+    <a href="#" onclick="document.getElementById('create-form').scrollIntoView({behavior:'smooth'});return false;">Orders</a>
+    <a href="#" onclick="document.querySelector('.orders').scrollIntoView({behavior:'smooth'});return false;">Analytics</a>
+    <a href="#" onclick="document.querySelector('.orders').scrollIntoView({behavior:'smooth'});return false;">Profile</a>
   </div>
   <div class="nav-right">
     <a href="/dispatcher.html" class="dispatcher-link">Dispatcher →</a>
@@ -188,9 +188,7 @@ input::placeholder{ color:#4A5568; }
   <section class="hero">
     <h1 id="hero-greeting">Good day 👋</h1>
     <p>Manage deliveries, monitor orders and streamline logistics through FleetPulse's smart merchant dashboard.</p>
-    <div class="hero-meta">
-      <span class="merchant-badge" id="active-merchant-badge">Loading merchant…</span>
-    </div>
+    <div class="hero-meta"></div>
     <button onclick="document.getElementById('create-form').scrollIntoView({behavior:'smooth'})">Create New Delivery</button>
   </section>
 
@@ -274,7 +272,6 @@ input::placeholder{ color:#4A5568; }
   <section class="orders">
     <div class="orders-header">
       <h2>Recent Orders</h2>
-      <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
     </div>
     <div id="orders-list">
       <div class="empty">Loading orders…</div>
@@ -318,14 +315,10 @@ function renderMerchantSelect() {
   const sel = document.getElementById('f-merchant');
   if (!merchants.length) {
     sel.innerHTML = '<option value="">No merchants found — add one in Swagger</option>';
-    document.getElementById('active-merchant-badge').textContent = 'No merchant registered';
     return;
   }
   sel.innerHTML = merchants.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-  document.getElementById('active-merchant-badge').textContent = '🏪 ' + merchants[0].name;
   sel.onchange = () => {
-    const m = merchants.find(m => m.id == sel.value);
-    if (m) document.getElementById('active-merchant-badge').textContent = '🏪 ' + m.name;
     renderStats();
     renderOrders();
   };
