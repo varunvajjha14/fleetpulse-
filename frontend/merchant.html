@@ -289,12 +289,39 @@ const hour = new Date().getHours();
 document.getElementById('hero-greeting').textContent =
   hour < 12 ? 'Good Morning 👋' : hour < 17 ? 'Good Afternoon 👋' : 'Good Evening 👋';
 
+// ── AUTH CHECK ──
+const token = localStorage.getItem('fp_token');
+const userRole = localStorage.getItem('fp_role');
+const userName = localStorage.getItem('fp_name');
+
+if (!token) {
+  window.location.href = '/login.html';
+}
+
+// Add logout button to navbar
+document.addEventListener('DOMContentLoaded', () => {
+  const navRight = document.querySelector('.nav-right');
+  if (navRight && userName) {
+    navRight.insertAdjacentHTML('afterbegin', `
+      <span style="font-size:13px;color:var(--muted);margin-right:8px">👤 ${userName}</span>
+      <button onclick="logout()" style="font-size:12px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;font-family:'Inter',sans-serif;transition:.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--muted)'">Logout</button>
+    `);
+  }
+});
+
+function logout() {
+  localStorage.removeItem('fp_token');
+  localStorage.removeItem('fp_role');
+  localStorage.removeItem('fp_name');
+  window.location.href = '/login.html';
+}
+
 async function loadData() {
   try {
-    const [oRes, rRes, mRes] = await Promise.all([
-      fetch(`${API}/orders/`),
-      fetch(`${API}/riders/`),
-      fetch(`${API}/merchants/`)
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const [oRes, rRes] = await Promise.all([
+      fetch(`${API}/orders/`, { headers }),
+      fetch(`${API}/riders/`, { headers })
     ]);
     allOrders = await oRes.json();
     allRiders = await rRes.json();
