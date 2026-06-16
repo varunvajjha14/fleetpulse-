@@ -66,3 +66,18 @@ class Trip(Base):
     estimated_payout = Column(Float, default=0.0)
     order = relationship("Order", back_populates="trip")
     rider = relationship("Rider", back_populates="trips")
+
+class UserRole(str, enum.Enum):
+    merchant = "merchant"
+    dispatcher = "dispatcher"
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    role = Column(Enum(UserRole), nullable=False)
+    merchant_id = Column(Integer, ForeignKey("merchants.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
