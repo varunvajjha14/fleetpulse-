@@ -319,9 +319,10 @@ function logout() {
 async function loadData() {
   try {
     const headers = { 'Authorization': `Bearer ${token}` };
-    const [oRes, rRes] = await Promise.all([
+    const [oRes, rRes, mRes] = await Promise.all([
       fetch(`${API}/orders/`, { headers }),
-      fetch(`${API}/riders/`, { headers })
+      fetch(`${API}/riders/`, { headers }),
+      fetch(`${API}/merchants/`, { headers })
     ]);
     allOrders = await oRes.json();
     allRiders = await rRes.json();
@@ -514,7 +515,10 @@ async function createOrder() {
   try {
     const res = await fetch(`${API}/orders/`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       body: JSON.stringify({
         merchant_id:      parseInt(merchantId),
         customer_name:    customer,
@@ -546,13 +550,6 @@ async function createOrder() {
     btn.disabled = false;
     btn.textContent = 'Create Delivery';
   }
-}
-
-function toast(msg, type = 'success') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `show ${type}`;
-  setTimeout(() => el.className = '', 3500);
 }
 
 loadData();
