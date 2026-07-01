@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from database import engine, Base
-from routes import orders, riders, merchants, reviews, auth
+from routes import orders, riders, merchants, reviews, auth, public
 
 Base.metadata.create_all(bind=engine)
 
@@ -23,6 +23,7 @@ app.include_router(riders.router)
 app.include_router(merchants.router)
 app.include_router(reviews.router)
 app.include_router(auth.router)
+app.include_router(public.router)
 
 frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
 

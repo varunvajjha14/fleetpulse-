@@ -18,12 +18,15 @@ class RiderStatus(str, enum.Enum):
 
 class Merchant(Base):
     __tablename__ = "merchants"
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     phone = Column(String)
     address = Column(String)
+    slug = Column(String, unique=True, index=True, nullable=True)  # ← add this line
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
     orders = relationship("Order", back_populates="merchant")
 
 class Rider(Base):

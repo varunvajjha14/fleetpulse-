@@ -20,10 +20,10 @@ db.commit()
 
 # ── Merchants ──
 merchants = [
-    Merchant(name="Chai Point",        email="chai@fleetpulse.com",    phone="9876501001", address="Andheri West, Mumbai"),
-    Merchant(name="Box8",              email="box8@fleetpulse.com",    phone="9876501002", address="Bandra East, Mumbai"),
-    Merchant(name="Swiggy Dark Store", email="swiggy@fleetpulse.com",  phone="9876501003", address="Powai, Mumbai"),
-    Merchant(name="Zepto Mumbai",      email="zepto@fleetpulse.com",   phone="9876501004", address="Juhu, Mumbai"),
+    Merchant(name="Chai Point",        email="chai@fleetpulse.com",    phone="9876501001", address="Andheri West, Mumbai",  slug="chai-point"),
+    Merchant(name="Box8",              email="box8@fleetpulse.com",    phone="9876501002", address="Bandra East, Mumbai",   slug="box8"),
+    Merchant(name="Swiggy Dark Store", email="swiggy@fleetpulse.com",  phone="9876501003", address="Powai, Mumbai",         slug="swiggy-dark-store"),
+    Merchant(name="Zepto Mumbai",      email="zepto@fleetpulse.com",   phone="9876501004", address="Juhu, Mumbai",          slug="zepto-mumbai"),
 ]
 db.add_all(merchants)
 db.commit()
