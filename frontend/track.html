@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Track Order — FleetPulse</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+--bg:#0D1117;
+--card:#161B22;
+--accent:#FF6B35;
+--text:#F8FAFC;
+--muted:#94A3B8;
+--border:#26303C;
+}
+*{ margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; }
+body{ background:var(--bg); color:var(--text); min-height:100vh; }
+
+.topbar{
+  background:var(--card); border-bottom:1px solid var(--border);
+  padding:16px 24px; display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+}
+.logo{ font-size:20px; font-weight:800; }
+.logo span{ color:var(--accent); }
+.order-ref{ font-size:13px; color:var(--muted); font-family:monospace; }
+
+/* STATUS BAR */
+.status-bar{
+  background:var(--card); border-bottom:1px solid var(--border);
+  padding:20px 24px;
+}
+.status-steps{
+  display:flex; align-items:center; justify-content:center;
+  gap:0; max-width:500px; margin:0 auto;
+}
+.step{
+  display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;
+  position:relative;
+}
+.step:not(:last-child)::after{
+  content:''; position:absolute; top:16px; left:60%; width:80%;
+  height:2px; background:var(--border); z-index:0;
+}
+.step.done:not(:last-child)::after{ background:var(--accent); }
+.step-dot{
+  width:32px; height:32px; border-radius:50%; background:var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; position:relative; z-index:1; transition:.3s;
+}
+.step.done .step-dot{ background:var(--accent); }
+.step.active .step-dot{ background:var(--accent); box-shadow:0 0 0 4px rgba(255,107,53,.25); }
+.step-label{ font-size:10px; color:var(--muted); font-weight:500; text-align:center; }
+.step.done .step-label, .step.active .step-label{ color:var(--text); }
+
+/* MAP */
+#track-map{ height:380px; width:100%; z-index:1; }
+.leaflet-container{ background:#1B2430; }
+.leaflet-popup-content-wrapper{ background:#161B22; color:#F8FAFC; border:1px solid #26303C; border-radius:10px; box-shadow:none; }
+.leaflet-popup-tip{ background:#161B22; }
+.leaflet-popup-content{ margin:10px 14px; font-size:13px; }
+
+/* INFO CARDS */
+.info-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:12px;
+  padding:20px 24px; max-width:600px; margin:0 auto;
+}
+.info-card{
+  background:var(--card); border:1px solid var(--border);
+  border-radius:16px; padding:16px;
+}
+.info-label{ font-size:11px; color:var(--muted); font-weight:500; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+.info-value{ font-size:14px; font-weight:600; }
+.info-sub{ font-size:12px; color:var(--muted); margin-top:2px; }
+
+.rider-card{
+  margin:0 24px 20px; background:var(--card);
+  border:1px solid rgba(255,107,53,.3); border-radius:16px; padding:16px;
+  display:flex; align-items:center; gap:14px; max-width:552px; margin-left:auto; margin-right:auto;
+}
+.rider-avatar-sm{
+  width:44px; height:44px; border-radius:50%;
+  background:rgba(255,107,53,.15); color:var(--accent);
+  font-weight:800; font-size:18px; display:flex;
+  align-items:center; justify-content:center; flex-shrink:0;
+}
+.rider-name{ font-size:15px; font-weight:600; }
+.rider-sub{ font-size:12px; color:var(--muted); margin-top:2px; }
+
+.delivered-screen{
+  text-align:center; padding:40px 24px;
+}
+.delivered-icon{ font-size:64px; margin-bottom:16px; }
+.delivered-title{ font-size:24px; font-weight:700; margin-bottom:8px; }
+.delivered-sub{ font-size:14px; color:var(--muted); }
+
+.powered{ text-align:center; padding:20px; font-size:12px; color:var(--muted); }
+.powered span{ color:var(--accent); font-weight:600; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">Fleet<span>Pulse</span></div>
+  <div class="order-ref" id="order-ref-label">Loading…</div>
+</div>
+
+<div id="app">
+  <div style="text-align:center;padding:60px;color:var(--muted)">Loading your order…</div>
+</div>
+
+<div class="powered">Powered by <span>FleetPulse</span></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const API = 'https://fleetpulse-production-2e5c.up.railway.app';
+let map = null, riderMarker = null, pickupMarker = null, deliveryMarker = null, routeLine = null;
+let simLat = null, simLng = null, simProgress = 0;
+let orderData = null;
+
+// Get order ref from URL — /track/ORD-0001
+const parts = window.location.pathname.split('/').filter(Boolean);
+const orderRef = parts[parts.length - 1];
+
+const STATUS_STEPS = [
+  { key: 'pending',    label: 'Order placed', icon: '📦' },
+  { key: 'assigned',   label: 'Rider assigned', icon: '🏍' },
+  { key: 'in_transit', label: 'On the way', icon: '⚡' },
+  { key: 'delivered',  label: 'Delivered', icon: '✅' },
+];
+
+async function loadOrder() {
+  try {
+    const res = await fetch(`${API}/public/track/${orderRef}`);
+    if (!res.ok) { showNotFound(); return; }
+    orderData = await res.json();
+    document.getElementById('order-ref-label').textContent = orderData.order_ref;
+    render();
+  } catch(e) {
+    showNotFound();
+  }
+}
+
+function render() {
+  if (orderData.status === 'delivered') {
+    renderDelivered();
+    return;
+  }
+  renderTracking();
+}
+
+function renderTracking() {
+  const stepIndex = STATUS_STEPS.findIndex(s => s.key === orderData.status);
+
+  document.getElementById('app').innerHTML = `
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div class="status-steps">
+        ${STATUS_STEPS.map((s, i) => `
+          <div class="step ${i < stepIndex ? 'done' : i === stepIndex ? 'active' : ''}">
+            <div class="step-dot">${i <= stepIndex ? s.icon : ''}</div>
+            <div class="step-label">${s.label}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Map -->
+    <div id="track-map"></div>
+
+    <!-- Rider card (if assigned) -->
+    ${orderData.rider ? `
+      <div style="padding:16px 24px 0;max-width:600px;margin:0 auto">
+        <div class="rider-card">
+          <div class="rider-avatar-sm">${orderData.rider.name.charAt(0)}</div>
+          <div>
+            <div class="rider-name">🏍 ${orderData.rider.name}</div>
+            <div class="rider-sub">${orderData.status === 'in_transit' ? 'On the way to you' : 'Heading to pickup'}</div>
+          </div>
+        </div>
+      </div>
+    ` : `
+      <div style="padding:16px 24px 0;max-width:600px;margin:0 auto">
+        <div class="rider-card">
+          <div class="rider-avatar-sm">⏳</div>
+          <div>
+            <div class="rider-name">Waiting for rider</div>
+            <div class="rider-sub">A rider will be assigned shortly</div>
+          </div>
+        </div>
+      </div>
+    `}
+
+    <!-- Info cards -->
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-label">Pickup</div>
+        <div class="info-value" style="font-size:13px">${orderData.pickup_address}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Delivery</div>
+        <div class="info-value" style="font-size:13px">${orderData.delivery_address}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Customer</div>
+        <div class="info-value">${orderData.customer_name}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Merchant</div>
+        <div class="info-value">${orderData.merchant_name || '—'}</div>
+      </div>
+    </div>
+  `;
+
+  initMap();
+}
+
+function initMap() {
+  const hasCoords = orderData.pickup_lat && orderData.delivery_lat;
+  const center = hasCoords
+    ? [orderData.pickup_lat, orderData.pickup_lng]
+    : [19.0760, 72.8777];
+
+  map = L.map('track-map').setView(center, 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors', maxZoom: 18
+  }).addTo(map);
+
+  if (!hasCoords) return;
+
+  // Pickup marker
+  pickupMarker = L.marker([orderData.pickup_lat, orderData.pickup_lng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="background:#58A6FF;width:36px;height:36px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.4)">🏪</div>`,
+      iconSize: [36,36], iconAnchor:[18,18], popupAnchor:[0,-20]
+    })
+  }).addTo(map);
+  pickupMarker.bindPopup(`<strong>${orderData.merchant_name}</strong><br>${orderData.pickup_address}`);
+
+  // Delivery marker
+  deliveryMarker = L.marker([orderData.delivery_lat, orderData.delivery_lng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="background:#3FB950;width:36px;height:36px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.4)">🏠</div>`,
+      iconSize: [36,36], iconAnchor:[18,18], popupAnchor:[0,-20]
+    })
+  }).addTo(map);
+  deliveryMarker.bindPopup(`<strong>Your location</strong><br>${orderData.delivery_address}`);
+
+  // Route line
+  routeLine = L.polyline(
+    [[orderData.pickup_lat, orderData.pickup_lng],[orderData.delivery_lat, orderData.delivery_lng]],
+    { color:'#FF6B35', weight:3, opacity:0.5, dashArray:'6,6' }
+  ).addTo(map);
+
+  // Fit map to show both points
+  map.fitBounds([[orderData.pickup_lat, orderData.pickup_lng],[orderData.delivery_lat, orderData.delivery_lng]], { padding:[40,40] });
+
+  // Simulate rider movement if in transit
+  if (orderData.status === 'in_transit' || orderData.status === 'assigned') {
+    startRiderSimulation();
+  }
+}
+
+function startRiderSimulation() {
+  if (!orderData.pickup_lat || !orderData.delivery_lat) return;
+
+  // Start rider at pickup point
+  simLat = orderData.pickup_lat;
+  simLng = orderData.pickup_lng;
+  simProgress = 0;
+
+  riderMarker = L.marker([simLat, simLng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="background:#FF6B35;width:40px;height:40px;border-radius:50%;border:3px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 12px rgba(255,107,53,.5)">🏍</div>`,
+      iconSize: [40,40], iconAnchor:[20,20], popupAnchor:[0,-22]
+    })
+  }).addTo(map);
+
+  if (orderData.rider) {
+    riderMarker.bindPopup(`<strong>${orderData.rider.name}</strong><br>On the way`);
+  }
+
+  // Move rider toward delivery every 2 seconds
+  setInterval(() => {
+    if (simProgress >= 1) return;
+    simProgress = Math.min(simProgress + 0.015, 1);
+
+    const newLat = orderData.pickup_lat + (orderData.delivery_lat - orderData.pickup_lat) * simProgress;
+    const newLng = orderData.pickup_lng + (orderData.delivery_lng - orderData.pickup_lng) * simProgress;
+
+    if (riderMarker) riderMarker.setLatLng([newLat, newLng]);
+  }, 2000);
+}
+
+function renderDelivered() {
+  document.getElementById('app').innerHTML = `
+    <div class="delivered-screen">
+      <div class="delivered-icon">✅</div>
+      <div class="delivered-title">Order Delivered!</div>
+      <div class="delivered-sub">
+        Your order from ${orderData.merchant_name} has been delivered.<br>
+        Thank you for using FleetPulse.
+      </div>
+    </div>
+  `;
+}
+
+function showNotFound() {
+  document.getElementById('app').innerHTML = `
+    <div style="text-align:center;padding:60px 24px">
+      <div style="font-size:48px;margin-bottom:16px">🔍</div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:8px">Order not found</div>
+      <div style="font-size:14px;color:var(--muted)">Check your tracking link and try again.</div>
+    </div>
+  `;
+}
+
+loadOrder();
+setInterval(loadOrder, 8000);
+</script>
+</body>
+</html>

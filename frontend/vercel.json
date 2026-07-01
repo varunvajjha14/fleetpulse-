@@ -1,5 +1,7 @@
 {
   "rewrites": [
+    { "source": "/order/:slug", "destination": "/order.html" },
+    { "source": "/track/:ref", "destination": "/track.html" },
     { "source": "/app/merchant.html", "destination": "/merchant.html" },
     { "source": "/app/dispatcher.html", "destination": "/dispatcher.html" },
     { "source": "/app/(.*)", "destination": "/$1" }
