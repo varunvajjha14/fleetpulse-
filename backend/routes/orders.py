@@ -164,6 +164,52 @@ def update_status(order_id: int, status: str, db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"Status updated to {status}"}
 
+@router.post("/auto-progress")
+def auto_progress_orders(db: Session = Depends(get_db)):
+    """
+    Auto-advances order statuses based on time elapsed.
+    Called by a scheduler or manually — moves:
+    - assigned → in_transit after 5 minutes
+    - in_transit → delivered after 20 minutes
+    """
+    from datetime import datetime, timedelta
+    now = datetime.utcnow()
+    updated = []
+
+    # assigned → in_transit after 5 mins
+    assigned_orders = db.query(Order).filter(
+        Order.status == OrderStatus.assigned
+    ).all()
+
+    for order in assigned_orders:
+        if order.trip and order.trip.assigned_at:
+            elapsed = now - order.trip.assigned_at.replace(tzinfo=None)
+            if elapsed > timedelta(minutes=5):
+                order.status = OrderStatus.in_transit
+                updated.append({"id": order.id, "new_status": "in_transit"})
+
+    # in_transit → delivered after 20 mins
+    transit_orders = db.query(Order).filter(
+        Order.status == OrderStatus.in_transit
+    ).all()
+
+    for order in transit_orders:
+        if order.trip and order.trip.assigned_at:
+            elapsed = now - order.trip.assigned_at.replace(tzinfo=None)
+            if elapsed > timedelta(minutes=25):
+                order.status = OrderStatus.delivered
+                if order.trip.delivered_at is None:
+                    order.trip.delivered_at = now
+                if order.trip.rider:
+                    order.trip.rider.status = RiderStatus.available
+                updated.append({"id": order.id, "new_status": "delivered"})
+
+    db.commit()
+    return {
+        "message": f"{len(updated)} orders auto-progressed",
+        "updated": updated
+    }
+
 def _estimate_payout(order: Order) -> float:
     if order.pickup_lat and order.delivery_lat:
         from ml.predictor import predict_payout
