@@ -36,16 +36,18 @@ def place_customer_order(slug: str, data: CustomerOrder, db: Session = Depends(g
         raise HTTPException(status_code=404, detail="Merchant not found")
 
     order = Order(
-        merchant_id=merchant.id,
-        customer_name=data.customer_name,
-        customer_phone=data.customer_phone,
-        pickup_address=merchant.address or f"{merchant.name} — pickup",
-        delivery_address=data.delivery_address,
-        delivery_lat=data.delivery_lat,
-        delivery_lng=data.delivery_lng,
-        notes=data.notes,
-        status=OrderStatus.pending
-    )
+    merchant_id=merchant.id,
+    customer_name=data.customer_name,
+    customer_phone=data.customer_phone,
+    pickup_address=merchant.address or f"{merchant.name} — pickup",
+    delivery_address=data.delivery_address,
+    pickup_lat=merchant.latitude,    # ← add this
+    pickup_lng=merchant.longitude,   # ← add this
+    delivery_lat=data.delivery_lat,
+    delivery_lng=data.delivery_lng,
+    notes=data.notes,
+    status=OrderStatus.pending
+)
     db.add(order)
     db.commit()
     db.refresh(order)

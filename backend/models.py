@@ -25,8 +25,10 @@ class Merchant(Base):
     phone = Column(String)
     address = Column(String)
     slug = Column(String, unique=True, index=True, nullable=True)  # ← add this line
+    latitude = Column(Float, nullable=True)   # ← add this
+    longitude = Column(Float, nullable=True)  # ← add this
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-
+    
     orders = relationship("Order", back_populates="merchant")
 
 class Rider(Base):
